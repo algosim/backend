@@ -1,0 +1,158 @@
+basePath: /api/v1
+definitions:
+  http.LogoutRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  http.OAuthCallbackRequest:
+    properties:
+      code:
+        type: string
+    required:
+    - code
+    type: object
+  http.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  http.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: Authentication service for Problem Tracking & Challenge System
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Auth Service API
+  version: "1.0"
+paths:
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidates the refresh token
+      parameters:
+      - description: Logout data
+        in: body
+        name: token
+        required: true
+        schema:
+          $ref: '#/definitions/http.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Logout
+      tags:
+      - auth
+  /auth/oauth/callback:
+    post:
+      consumes:
+      - application/json
+      description: Handles the callback from OAuth provider
+      parameters:
+      - description: OAuth callback data
+        in: body
+        name: code
+        required: true
+        schema:
+          $ref: '#/definitions/http.OAuthCallbackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: OAuth Callback
+      tags:
+      - auth
+  /auth/oauth/login:
+    get:
+      consumes:
+      - application/json
+      description: Redirects to Google OAuth login page
+      parameters:
+      - description: OAuth provider (e.g., google)
+        in: query
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Redirect to OAuth provider
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Initiate OAuth Login
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Generates a new access token using refresh token
+      parameters:
+      - description: Refresh token data
+        in: body
+        name: token
+        required: true
+        schema:
+          $ref: '#/definitions/http.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Refresh Token
+      tags:
+      - auth
+swagger: "2.0"
