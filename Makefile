@@ -21,6 +21,7 @@ install:
 	$(GO) get -u github.com/swaggo/swag/cmd/swag
 	$(GO) get -u github.com/swaggo/gin-swagger
 	$(GO) get -u github.com/swaggo/files
+	$(GO) get -u github.com/golang-jwt/jwt/v5
 
 # Clean build files and generated documentation
 clean:

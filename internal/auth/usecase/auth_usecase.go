@@ -2,9 +2,10 @@ package usecase
 
 import (
 	"fmt"
-	"time"
 
+	"github.com/algosim/backend/configs"
 	"github.com/algosim/backend/internal/auth/domain"
+	"github.com/algosim/backend/internal/auth/infrastructure/jwt"
 	"github.com/algosim/backend/internal/auth/infrastructure/oauth"
 	"github.com/algosim/backend/internal/auth/repository"
 )
@@ -14,14 +15,21 @@ type AuthUseCase struct {
 	userRepo    repository.UserRepository
 	tokenRepo   repository.TokenRepository
 	googleOAuth *oauth.GoogleOAuth
+	jwtManager  *jwt.JWTManager
 }
 
 // NewAuthUseCase creates a new AuthUseCase instance
-func NewAuthUseCase(userRepo repository.UserRepository, tokenRepo repository.TokenRepository, googleOAuth *oauth.GoogleOAuth) *AuthUseCase {
+func NewAuthUseCase(
+	userRepo repository.UserRepository,
+	tokenRepo repository.TokenRepository,
+	googleOAuth *oauth.GoogleOAuth,
+	config *configs.Config,
+) *AuthUseCase {
 	return &AuthUseCase{
 		userRepo:    userRepo,
 		tokenRepo:   tokenRepo,
 		googleOAuth: googleOAuth,
+		jwtManager:  jwt.NewJWTManager(config),
 	}
 }
 
@@ -35,66 +43,90 @@ func (u *AuthUseCase) HandleOAuthCallback(code string) (*domain.Token, error) {
 	// Exchange code for token
 	token, err := u.googleOAuth.ExchangeCodeForToken(code)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to exchange code for token: %w", err)
 	}
-	fmt.Println("made it", code)
-	fmt.Println("made token", token.RefreshToken)
 
 	// Get user info from Google
-	userInfo, err := u.googleOAuth.GetUserInfo(token.RefreshToken)
+	userInfo, err := u.googleOAuth.GetUserInfo(token.AccessToken)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get user info: %w", err)
 	}
 
-	fmt.Println("made user info", userInfo.ID)
-
 	// Check if user exists
-	existingUser, err := u.userRepo.FindByOAuthProviderID("google", userInfo.ID)
+	user, err := u.userRepo.FindByOAuthProviderID("google", userInfo.ID)
 	if err != nil {
 		// Create new user if not found
 		newUser := u.googleOAuth.CreateUserFromGoogleInfo(userInfo)
 		if err := u.userRepo.Create(newUser); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create user: %w", err)
 		}
-		token.UserID = newUser.ID
-	} else {
-		token.UserID = existingUser.ID
+
+		user = newUser
 	}
 
-	// Save token
+	token, err = u.jwtManager.GenerateToken(user)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate token: %w", err)
+	}
+
+	// Store refresh token
 	if err := u.tokenRepo.Create(token); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to store refresh token: %w", err)
 	}
 
 	return token, nil
 }
 
-// RefreshToken generates a new access token using refresh token
-func (u *AuthUseCase) RefreshToken(refreshToken string) (*domain.Token, error) {
-	// Find token
-	token, err := u.tokenRepo.FindByRefreshToken(refreshToken)
+// RefreshToken generates a new access token using a refresh token
+func (u *AuthUseCase) RefreshToken(refreshTokenString string) (*domain.Token, error) {
+	// Find refresh token
+	token, err := u.tokenRepo.FindByRefreshToken(refreshTokenString)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to find refresh token: %w", err)
 	}
 
-	// Check if token is expired
-	if time.Now().After(token.ExpiresAt) {
-		return nil, domain.ErrTokenExpired
+	// Validate refresh token
+	if err := u.jwtManager.ValidateRefreshToken(token); err != nil {
+		return nil, fmt.Errorf("invalid refresh token: %w", err)
 	}
 
-	// TODO: Implement token refresh logic with Google OAuth
-	// For now, just return the existing token
-	return token, nil
+	// Get user
+	user, err := u.userRepo.FindByID(token.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find user: %w", err)
+	}
+
+	// Generate new refresh token
+	newToken, err := u.jwtManager.GenerateToken(user)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate new refresh token: %w", err)
+	}
+
+	// Store new refresh token
+	if err := u.tokenRepo.Create(newToken); err != nil {
+		return nil, fmt.Errorf("failed to store new refresh token: %w", err)
+	}
+
+	// Delete old refresh token
+	if err := u.tokenRepo.Delete(token.ID); err != nil {
+		return nil, fmt.Errorf("failed to delete old refresh token: %w", err)
+	}
+
+	return newToken, nil
 }
 
 // Logout invalidates the refresh token
-func (u *AuthUseCase) Logout(refreshToken string) error {
-	// Find token
-	token, err := u.tokenRepo.FindByRefreshToken(refreshToken)
+func (u *AuthUseCase) Logout(refreshTokenString string) error {
+	// Find refresh token
+	token, err := u.tokenRepo.FindByRefreshToken(refreshTokenString)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to find refresh token: %w", err)
 	}
 
-	// Delete token
-	return u.tokenRepo.Delete(token.ID)
+	// Delete refresh token
+	if err := u.tokenRepo.Delete(token.ID); err != nil {
+		return fmt.Errorf("failed to delete refresh token: %w", err)
+	}
+
+	return nil
 }

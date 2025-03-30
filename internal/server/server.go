@@ -48,7 +48,7 @@ func (s *Server) SetupRoutes() {
 	googleOAuth := oauth.NewGoogleOAuth(s.config)
 
 	// Initialize use cases
-	authUseCase := usecase.NewAuthUseCase(userRepo, tokenRepo, googleOAuth)
+	authUseCase := usecase.NewAuthUseCase(userRepo, tokenRepo, googleOAuth, s.config)
 
 	// Initialize handlers
 	authHandler := http.NewAuthHandler(authUseCase)

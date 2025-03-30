@@ -71,7 +71,7 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 
 	// Return tokens to the frontend
 	c.JSON(http.StatusOK, TokenResponse{
-		AccessToken:  token.RefreshToken, // TODO: Generate proper access token
+		AccessToken:  token.AccessToken,
 		RefreshToken: token.RefreshToken,
 	})
 }
@@ -100,7 +100,8 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, TokenResponse{
-		AccessToken: token.RefreshToken, // TODO: Generate proper access token
+		AccessToken:  token.AccessToken,
+		RefreshToken: token.RefreshToken,
 	})
 }
 

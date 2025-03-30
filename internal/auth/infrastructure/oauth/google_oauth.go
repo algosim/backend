@@ -92,6 +92,7 @@ func (g *GoogleOAuth) ExchangeCodeForToken(code string) (*domain.Token, error) {
 	// Create domain token
 	token := &domain.Token{
 		ID:           uuid.New(),
+		AccessToken:  tokenResp.AccessToken,
 		RefreshToken: tokenResp.RefreshToken,
 		ExpiresAt:    time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second),
 	}
@@ -106,7 +107,7 @@ func (g *GoogleOAuth) GetUserInfo(accessToken string) (*GoogleUserInfo, error) {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s"))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
