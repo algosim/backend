@@ -71,7 +71,7 @@ const docTemplate = `{
             }
         },
         "/auth/oauth/callback": {
-            "post": {
+            "get": {
                 "description": "Handles the callback from OAuth provider",
                 "consumes": [
                     "application/json"
@@ -85,13 +85,11 @@ const docTemplate = `{
                 "summary": "OAuth Callback",
                 "parameters": [
                     {
-                        "description": "OAuth callback data",
+                        "type": "string",
+                        "description": "Authorization code from OAuth provider",
                         "name": "code",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/http.OAuthCallbackRequest"
-                        }
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -206,17 +204,6 @@ const docTemplate = `{
             ],
             "properties": {
                 "refresh_token": {
-                    "type": "string"
-                }
-            }
-        },
-        "http.OAuthCallbackRequest": {
-            "type": "object",
-            "required": [
-                "code"
-            ],
-            "properties": {
-                "code": {
                     "type": "string"
                 }
             }

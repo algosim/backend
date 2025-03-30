@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/algosim/backend/internal/auth/domain"
@@ -36,12 +37,16 @@ func (u *AuthUseCase) HandleOAuthCallback(code string) (*domain.Token, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("made it", code)
+	fmt.Println("made token", token.RefreshToken)
 
 	// Get user info from Google
 	userInfo, err := u.googleOAuth.GetUserInfo(token.RefreshToken)
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("made user info", userInfo.ID)
 
 	// Check if user exists
 	existingUser, err := u.userRepo.FindByOAuthProviderID("google", userInfo.ID)

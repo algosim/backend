@@ -10,7 +10,7 @@ func SetupAuthRoutes(r *gin.Engine, h *AuthHandler) {
 	{
 		// OAuth routes
 		auth.GET("/oauth/login", h.InitiateOAuthLogin)
-		auth.POST("/oauth/callback", h.OAuthCallback)
+		auth.GET("/oauth/callback", h.OAuthCallback)
 
 		// Token management
 		auth.POST("/refresh", h.RefreshToken)

@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/algosim/backend/internal/auth/usecase"
@@ -40,8 +39,11 @@ func (h *AuthHandler) InitiateOAuthLogin(c *gin.Context) {
 	// Generate state for CSRF protection
 	state := "random-state" // TODO: Generate proper random state
 	authURL := h.authUseCase.InitiateOAuthLogin(state)
-	fmt.Println("authURL", authURL)
-	c.Redirect(http.StatusTemporaryRedirect, authURL)
+
+	// Instead of redirecting, return the URL to the frontend
+	c.JSON(http.StatusOK, gin.H{
+		"auth_url": authURL,
+	})
 }
 
 // OAuthCallback handles the OAuth callback
@@ -50,23 +52,24 @@ func (h *AuthHandler) InitiateOAuthLogin(c *gin.Context) {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param code body OAuthCallbackRequest true "OAuth callback data"
+// @Param code query string true "Authorization code from OAuth provider"
 // @Success 200 {object} TokenResponse
 // @Failure 400 {object} map[string]string
-// @Router /auth/oauth/callback [post]
+// @Router /auth/oauth/callback [get]
 func (h *AuthHandler) OAuthCallback(c *gin.Context) {
-	var req OAuthCallbackRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	code := c.Query("code")
+	if code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "authorization code is required"})
 		return
 	}
 
-	token, err := h.authUseCase.HandleOAuthCallback(req.Code)
+	token, err := h.authUseCase.HandleOAuthCallback(code)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Return tokens to the frontend
 	c.JSON(http.StatusOK, TokenResponse{
 		AccessToken:  token.RefreshToken, // TODO: Generate proper access token
 		RefreshToken: token.RefreshToken,
