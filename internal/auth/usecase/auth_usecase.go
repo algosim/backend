@@ -14,7 +14,7 @@ import (
 type AuthUseCase struct {
 	userRepo    repository.UserRepository
 	tokenRepo   repository.TokenRepository
-	googleOAuth *oauth.GoogleOAuth
+	googleOAuth oauth.GoogleOAuth
 	jwtManager  *jwt.JWTManager
 }
 
@@ -22,7 +22,7 @@ type AuthUseCase struct {
 func NewAuthUseCase(
 	userRepo repository.UserRepository,
 	tokenRepo repository.TokenRepository,
-	googleOAuth *oauth.GoogleOAuth,
+	googleOAuth oauth.GoogleOAuth,
 	config *configs.Config,
 ) *AuthUseCase {
 	return &AuthUseCase{
@@ -129,4 +129,20 @@ func (u *AuthUseCase) Logout(refreshTokenString string) error {
 	}
 
 	return nil
+}
+
+// ValidateToken validates an access token and returns the user information
+func (u *AuthUseCase) ValidateToken(tokenString string) (*domain.User, error) {
+	user, err := u.jwtManager.ValidateToken(tokenString)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate token: %w", err)
+	}
+
+	// Verify user exists in database
+	dbUser, err := u.userRepo.FindByID(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+
+	return dbUser, nil
 }

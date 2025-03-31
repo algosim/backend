@@ -103,3 +103,16 @@ func (m *JWTManager) ExtractEmailFromToken(tokenString string) (string, error) {
 	}
 	return claims.Email, nil
 }
+
+// ValidateToken validates an access token and returns the user information
+func (m *JWTManager) ValidateToken(tokenString string) (*domain.User, error) {
+	claims, err := m.ValidateAccessToken(tokenString)
+	if err != nil {
+		return nil, fmt.Errorf("invalid token: %w", err)
+	}
+
+	return &domain.User{
+		ID:    claims.UserID,
+		Email: claims.Email,
+	}, nil
+}

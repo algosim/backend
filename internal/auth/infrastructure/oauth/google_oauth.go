@@ -13,6 +13,14 @@ import (
 	"github.com/google/uuid"
 )
 
+// GoogleOAuth defines the interface for Google OAuth operations
+type GoogleOAuth interface {
+	GetAuthURL(state string) string
+	ExchangeCodeForToken(code string) (*domain.Token, error)
+	GetUserInfo(accessToken string) (*GoogleUserInfo, error)
+	CreateUserFromGoogleInfo(info *GoogleUserInfo) *domain.User
+}
+
 const (
 	googleAuthURL     = "https://accounts.google.com/o/oauth2/v2/auth"
 	googleTokenURL    = "https://oauth2.googleapis.com/token"
@@ -31,20 +39,20 @@ type GoogleUserInfo struct {
 	Locale        string `json:"locale"`
 }
 
-// GoogleOAuth handles Google OAuth authentication
-type GoogleOAuth struct {
+// GoogleOAuthImpl handles Google OAuth authentication
+type GoogleOAuthImpl struct {
 	config *configs.Config
 }
 
 // NewGoogleOAuth creates a new Google OAuth handler
-func NewGoogleOAuth(config *configs.Config) *GoogleOAuth {
-	return &GoogleOAuth{
+func NewGoogleOAuth(config *configs.Config) GoogleOAuth {
+	return &GoogleOAuthImpl{
 		config: config,
 	}
 }
 
 // GetAuthURL generates the Google OAuth authorization URL
-func (g *GoogleOAuth) GetAuthURL(state string) string {
+func (g *GoogleOAuthImpl) GetAuthURL(state string) string {
 	params := url.Values{}
 	params.Add("client_id", g.config.GoogleOAuth.ClientID)
 	params.Add("redirect_uri", g.config.GoogleOAuth.RedirectURI)
@@ -58,7 +66,7 @@ func (g *GoogleOAuth) GetAuthURL(state string) string {
 }
 
 // ExchangeCodeForToken exchanges the authorization code for access and refresh tokens
-func (g *GoogleOAuth) ExchangeCodeForToken(code string) (*domain.Token, error) {
+func (g *GoogleOAuthImpl) ExchangeCodeForToken(code string) (*domain.Token, error) {
 	params := url.Values{}
 	params.Add("client_id", g.config.GoogleOAuth.ClientID)
 	params.Add("client_secret", g.config.GoogleOAuth.ClientSecret)
@@ -101,7 +109,7 @@ func (g *GoogleOAuth) ExchangeCodeForToken(code string) (*domain.Token, error) {
 }
 
 // GetUserInfo retrieves user information from Google
-func (g *GoogleOAuth) GetUserInfo(accessToken string) (*GoogleUserInfo, error) {
+func (g *GoogleOAuthImpl) GetUserInfo(accessToken string) (*GoogleUserInfo, error) {
 	req, err := http.NewRequest("GET", googleUserInfoURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -130,7 +138,7 @@ func (g *GoogleOAuth) GetUserInfo(accessToken string) (*GoogleUserInfo, error) {
 }
 
 // CreateUserFromGoogleInfo creates a domain User from Google user info
-func (g *GoogleOAuth) CreateUserFromGoogleInfo(info *GoogleUserInfo) *domain.User {
+func (g *GoogleOAuthImpl) CreateUserFromGoogleInfo(info *GoogleUserInfo) *domain.User {
 	return &domain.User{
 		ID:              uuid.New(),
 		Email:           info.Email,

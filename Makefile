@@ -1,4 +1,4 @@
-.PHONY: run swag clean install setup
+.PHONY: run swag clean install setup test test-jwt
 
 # Go commands
 GO=go
@@ -22,6 +22,7 @@ install:
 	$(GO) get -u github.com/swaggo/gin-swagger
 	$(GO) get -u github.com/swaggo/files
 	$(GO) get -u github.com/golang-jwt/jwt/v5
+	$(GO) get -u github.com/stretchr/testify
 
 # Clean build files and generated documentation
 clean:
@@ -29,4 +30,8 @@ clean:
 	rm -f $(BINARY_NAME)
 
 # Setup: install dependencies and generate Swagger docs
-setup: install swag 
+setup: install swag
+
+# Run all tests
+test:
+	$(GO) test ./... -v

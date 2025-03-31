@@ -7,7 +7,7 @@ import (
 	"github.com/algosim/backend/configs"
 	"github.com/algosim/backend/docs"
 	"github.com/algosim/backend/internal/auth/api/http"
-	"github.com/algosim/backend/internal/auth/infrastructure/db"
+	"github.com/algosim/backend/internal/auth/infrastructure/db/memory"
 	"github.com/algosim/backend/internal/auth/infrastructure/oauth"
 	"github.com/algosim/backend/internal/auth/usecase"
 	"github.com/gin-gonic/gin"
@@ -41,8 +41,8 @@ func (s *Server) SetupRoutes() {
 	})
 
 	// Initialize repositories
-	userRepo := db.NewUserRepoPG()
-	tokenRepo := db.NewTokenRepoPG()
+	userRepo := memory.NewUserRepoMemo()
+	tokenRepo := memory.NewTokenRepoMemo()
 
 	// Initialize Google OAuth
 	googleOAuth := oauth.NewGoogleOAuth(s.config)

@@ -2,9 +2,11 @@ package http
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/algosim/backend/internal/auth/usecase"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // AuthHandler handles HTTP requests for authentication
@@ -82,6 +84,7 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
 // @Tags auth
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param token body RefreshTokenRequest true "Refresh token data"
 // @Success 200 {object} TokenResponse
 // @Failure 400 {object} map[string]string
@@ -111,6 +114,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 // @Tags auth
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param token body LogoutRequest true "Logout data"
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]string
@@ -128,6 +132,57 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}
+
+// ValidateToken handles token validation
+// @Summary Validate Token
+// @Description Validates the access token and returns user information
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} UserResponse
+// @Failure 401 {object} map[string]string
+// @Router /auth/validate [get]
+func (h *AuthHandler) ValidateToken(c *gin.Context) {
+	// Get token from Authorization header
+	tokenString := c.GetHeader("Authorization")
+	if tokenString == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "no token provided"})
+		return
+	}
+
+	// Remove "Bearer " prefix if present
+	if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
+		tokenString = tokenString[7:]
+	}
+
+	user, err := h.authUseCase.ValidateToken(tokenString)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, UserResponse{
+		ID:               user.ID,
+		Email:            user.Email,
+		CodeforcesHandle: user.CodeforcesHandle,
+		AtcoderHandle:    user.AtcoderHandle,
+		OAuthProvider:    user.OAuthProvider,
+		CreatedAt:        user.CreatedAt,
+		UpdatedAt:        user.UpdatedAt,
+	})
+}
+
+// UserResponse represents the user information response
+type UserResponse struct {
+	ID               uuid.UUID `json:"id"`
+	Email            string    `json:"email"`
+	CodeforcesHandle string    `json:"codeforces_handle,omitempty"`
+	AtcoderHandle    string    `json:"atcoder_handle,omitempty"`
+	OAuthProvider    string    `json:"oauth_provider"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 // Request types

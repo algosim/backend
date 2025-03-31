@@ -15,5 +15,6 @@ func SetupAuthRoutes(r *gin.Engine, h *AuthHandler) {
 		// Token management
 		auth.POST("/refresh", h.RefreshToken)
 		auth.POST("/logout", h.Logout)
+		auth.GET("/validate", h.ValidateToken)
 	}
 }
